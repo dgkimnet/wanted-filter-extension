@@ -1,0 +1,15 @@
+.highlight-wanted {
+    background-color: tomato;
+    border-radius: 10px;
+    padding: 5px;
+}
+
+.highlight-jumpit {
+    background-color: tomato;
+    border-radius: 10px;
+    margin: 5px;
+}
+
+.highlight-rocketpunch {
+    background-color: tomato !important;
+}
