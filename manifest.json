@@ -4,10 +4,10 @@
     "description": "원티드에서 사용자가 지정한 항목들에 대해서 하이라이트하여 표시해 주는 Firefox/Chrome 익스텐션\n\nHighlight job positions on job listing sites.\n\nSupported sites:\n- Wanted\n- Jumpit\n- RocketPunch\n\n> #원티드 #점핏 #로켓펀치 #wanted #jumpit #rocketpunch",
     "browser_specific_settings": {
         "gecko": {
-            "id": "wanted-filter-extension@dgkim.net"
+            "id": "wanted-filter-extension-support@dgkim.net"
         }
     },
-    "version": "0.1",
+    "version": "0.2",
     "permissions": [
         "contextMenus",
         "storage",
