@@ -16,15 +16,20 @@ chrome.runtime.onInstalled.addListener(() => {
         contexts: ["all"]
     });
     chrome.contextMenus.create({
-        id: "backup",
-        title: "Backup",
-        contexts: ["all"]
-    });
-    chrome.contextMenus.create({
         id: "editTagOfCompany",
         title: "Add tag to company",
         contexts: ["all"]
     });
+    chrome.contextMenus.create({
+        id: "backup",
+        title: "Backup to file",
+        contexts: ["all"]
+    });
+    chrome.contextMenus.create({
+        id: "restore",
+        title: "Restore from file",
+        contexts: ["all"]
+    })
 });
 
 chrome.contextMenus.onClicked.addListener(async (info, tab) => {
@@ -35,6 +40,18 @@ chrome.contextMenus.onClicked.addListener(async (info, tab) => {
                 console.log('context menu called backup');
                 chrome.runtime.sendMessage({
                     action: "backup",
+                });
+            },
+            args: [],
+        });
+        return;
+    } else if (info.menuItemId === 'restore') {
+        chrome.scripting.executeScript({
+            target: { tabId: tab.id },
+            func: () => {
+                console.log('context menu called restore');
+                chrome.runtime.sendMessage({
+                    action: "restore",
                 });
             },
             args: [],
@@ -149,6 +166,16 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         // download local storage as JSON file
         chrome.tabs.sendMessage(sender.tab.id, {
             action: "download",
+        });
+    } else if (message.action == 'restore') {
+        // upload JSON file and restore local storage
+        chrome.windows.create({
+            url: chrome.runtime.getURL('restore.html'),
+            type: 'popup',
+            width: 400,
+            height: 200,
+        }, (window) => {
+            chrome.windows.update(window.id, { focused: true });
         });
     }
 });
