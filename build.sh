@@ -6,6 +6,8 @@ manifest.json
 background.js
 content.js
 style.css
+restore.html
+restore.js
 "
 
 for I in $OUTPUT_FILES
