@@ -29,6 +29,47 @@ const STYLER = {
     },
 }
 
+const TAGGER = {
+    "www.wanted.co.kr": (el, tags, addTag) => {
+        if (addTag) {
+            let tagContainer = el.querySelector('.wanted-filter-tag-container');
+            if (!tagContainer) {
+                tagContainer = document.createElement('div');
+                tagContainer.className = 'wanted-filter-tag-container';
+                el.appendChild(tagContainer);
+            }
+            const tobeRemoved = [];
+            const foundTags = [];
+            const tagEls = el.querySelectorAll('.wanted-filter-tag');
+            for (const tagEl of tagEls) {
+                const tagName = tagEl.getAttribute('data-tag');
+                if (!tags.includes(tagName)) {
+                    tobeRemoved.push(tagEl);
+                    continue;
+                } else {
+                    foundTags.push(tagName);
+                }
+            }
+            for (const tagEl of tobeRemoved) {
+                tagEl.remove();
+            }
+            for (const tobeCreatedTag of tags) {
+                if (foundTags.includes(tobeCreatedTag)) continue;
+                const newTag = document.createElement('span');
+                newTag.className = 'wanted-filter-tag';
+                newTag.setAttribute('data-tag', tobeCreatedTag);
+                newTag.innerText = tobeCreatedTag;
+                tagContainer.appendChild(newTag);
+            }
+        } else {
+            const tagContainer = el.querySelector('.wanted-filter-tag-container');
+            if (tagContainer) {
+                tagContainer.remove();
+            }
+        }
+    },
+}
+
 const debounce = (func, delay) => {
     let timeoutId;
     return function(...args) {
@@ -62,6 +103,19 @@ const highlightSavedItems = () => {
                 console.log(`positionId: ${positionId} not found`);
             }
         });
+    });
+
+    chrome.storage.local.get([`${site}_companyTags`], (result) => {
+        const companyTags = result[`${site}_companyTags`] || {};
+        for (const companyId in companyTags) {
+            const tags = companyTags[companyId];
+            const els = document.querySelectorAll(`a[data-company-id="${companyId}"] img`);
+            if (els && els.length > 0) {
+                els.forEach((el) => {
+                    TAGGER[site]?.(el.parentElement, tags, true);
+                });
+            }
+        }
     });
 }
 
@@ -117,6 +171,29 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
             a.download = `wanted-filter-extension.json`;
             a.click();
             URL.revokeObjectURL(url);
+        });
+    } else if (request.action === 'editTagOfCompany') {
+        console.log('edit tag of company', request);
+        const { positionId } = request;
+        const companyId = document.querySelector(`a[data-position-id="${positionId}"]`)?.attributes['data-company-id']?.value;
+        if (!companyId) {
+            console.log(`Cannot find companyId for positionId: ${positionId}`);
+            return;
+        }
+        const localStorageKey = `${site}_companyTags`;
+        chrome.storage.local.get([localStorageKey], (result) => {
+            const currentTags = result?.[companyId]?.join(',') || "";
+            const userInput = prompt("Enter new tag for the company(comma separated):", currentTags);
+            const tags = userInput.split(',').map(tag => tag.trim());
+            const current = result[localStorageKey] || {};
+            current[companyId] = tags;
+            chrome.storage.local.set({ [localStorageKey]: current });
+            const els = document.querySelectorAll(`a[data-company-id="${companyId}"] img`);
+            if (els && els.length > 0) {
+                els.forEach((el) => {
+                    TAGGER[site]?.(el.parentElement, tags, true);
+                });
+            }
         });
     }
 });
