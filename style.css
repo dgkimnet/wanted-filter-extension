@@ -13,3 +13,20 @@
 .highlight-rocketpunch {
     background-color: tomato !important;
 }
+
+.wanted-filter-tag-container {
+    position: absolute !important;
+    bottom: 10px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    padding: 0 10px;
+}
+
+.wanted-filter-tag {
+    border-radius: 10px;
+    padding: 5px;
+    font-weight: bold;
+    background-color: green;
+    color: white;
+}

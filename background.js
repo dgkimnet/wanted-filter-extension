@@ -19,7 +19,12 @@ chrome.runtime.onInstalled.addListener(() => {
         id: "backup",
         title: "Backup",
         contexts: ["all"]
-    })
+    });
+    chrome.contextMenus.create({
+        id: "editTagOfCompany",
+        title: "Add tag to company",
+        contexts: ["all"]
+    });
 });
 
 chrome.contextMenus.onClicked.addListener(async (info, tab) => {
@@ -84,6 +89,21 @@ chrome.contextMenus.onClicked.addListener(async (info, tab) => {
             },
             args: [site, linkUrl, positionId],
         });
+    } else if (info.menuItemId === "editTagOfCompany") {
+        chrome.scripting.executeScript({
+            target: { tabId: tab.id },
+            func: (site, linkUrl, positionId) => {
+                console.log('context menu called', linkUrl, positionId);
+                if (positionId) {
+                    chrome.runtime.sendMessage({
+                        action: "editTagOfCompany",
+                        site,
+                        positionId,
+                    });
+                }
+            },
+            args: [site, linkUrl, positionId],
+        });
     }
 });
 
@@ -118,6 +138,12 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
             action: "updateHighLights",
             positionId: message.positionId,
             onOff: false,
+        });
+    } else if (message.action == 'editTagOfCompany') {
+        chrome.tabs.sendMessage(sender.tab.id, {
+            action: "editTagOfCompany",
+            site,
+            positionId: message.positionId,
         });
     } else if (message.action == 'backup') {
         // download local storage as JSON file
