@@ -5,6 +5,30 @@ const EL_PATTERNS = {
     "www.rocketpunch.com": `div[class*="job-card"] > a[href*="/jobs/#{positionId}/"]`,
 }
 
+const TAG_PARENT_PATTERNS = {
+    "www.wanted.co.kr": `a[data-company-id="#{companyKey}"] img`,
+    "jumpit.saramin.co.kr": `a div[class="img_box"] > img[alt="#{companyKey}"]`,
+    "www.rocketpunch.com": ``, /* not implemented yet */
+}
+/**
+ * 
+ * @param {*} site 
+ * @param {*} companyKey 
+ */
+const getTagTargetElements = (site, companyKey) => {
+    const tagParentPattern = TAG_PARENT_PATTERNS[site];
+    if (!tagParentPattern) {
+        throw new Error(`No tag parent pattern found for site: ${site}`);
+    }
+    const els = document.querySelectorAll(tagParentPattern.replace('#{companyKey}', companyKey));
+    if (els && els.length > 0) {
+        return els;
+    } else {
+        console.log(`No tag parent element found for companyKey: ${companyKey}`);
+        return null;
+    }
+}
+
 const STYLER = {
     "www.wanted.co.kr": (el, addStyle) => {
         if (addStyle) {
@@ -31,12 +55,17 @@ const STYLER = {
 
 const TAGGER = {
     "www.wanted.co.kr": (el, tags, addTag) => {
+        const parentElement = el.parentElement;
         if (addTag) {
-            let tagContainer = el.querySelector('.wanted-filter-tag-container');
+            let tagContainer = parentElement.querySelector('.wanted-filter-tag-container');
             if (!tagContainer) {
                 tagContainer = document.createElement('div');
                 tagContainer.className = 'wanted-filter-tag-container';
                 el.appendChild(tagContainer);
+            }
+            if (!tags || tags.length === 0) {
+                tagContainer.remove();
+                return;
             }
             const tobeRemoved = [];
             const foundTags = [];
@@ -68,6 +97,49 @@ const TAGGER = {
             }
         }
     },
+    "jumpit.saramin.co.kr": (el, tags, addTag) => {
+        const parentElement = el.parentElement;
+        if (addTag) {
+            let tagContainer = parentElement.querySelector('.wanted-filter-tag-container');
+            if (!tagContainer) {
+                tagContainer = document.createElement('div');
+                tagContainer.className = 'wanted-filter-tag-container';
+                el.appendChild(tagContainer);
+            }
+            if (!tags || tags.length === 0) {
+                tagContainer.remove();
+                return;
+            }
+            const tobeRemoved = [];
+            const foundTags = [];
+            const tagEls = el.querySelectorAll('.wanted-filter-tag');
+            for (const tagEl of tagEls) {
+                const tagName = tagEl.getAttribute('data-tag');
+                if (!tags.includes(tagName)) {
+                    tobeRemoved.push(tagEl);
+                    continue;
+                } else {
+                    foundTags.push(tagName);
+                }
+            }
+            for (const tagEl of tobeRemoved) {
+                tagEl.remove();
+            }
+            for (const tobeCreatedTag of tags) {
+                if (foundTags.includes(tobeCreatedTag)) continue;
+                const newTag = document.createElement('span');
+                newTag.className = 'wanted-filter-tag';
+                newTag.setAttribute('data-tag', tobeCreatedTag);
+                newTag.innerText = tobeCreatedTag;
+                tagContainer.appendChild(newTag);
+            }
+        } else {
+            const tagContainer = el.querySelector('.wanted-filter-tag-container');
+            if (tagContainer) {
+                tagContainer.remove();
+            }
+        }
+    }
 }
 
 const debounce = (func, delay) => {
@@ -107,9 +179,9 @@ const highlightSavedItems = () => {
 
     chrome.storage.local.get([`${site}_companyTags`], (result) => {
         const companyTags = result[`${site}_companyTags`] || {};
-        for (const companyId in companyTags) {
-            const tags = companyTags[companyId];
-            const els = document.querySelectorAll(`a[data-company-id="${companyId}"] img`);
+        for (const companyKey in companyTags) {
+            const tags = companyTags[companyKey];
+            const els = getTagTargetElements(site, companyKey);
             if (els && els.length > 0) {
                 els.forEach((el) => {
                     TAGGER[site]?.(el.parentElement, tags, true);
@@ -175,20 +247,41 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     } else if (request.action === 'editTagOfCompany') {
         console.log('edit tag of company', request);
         const { positionId } = request;
-        const companyId = document.querySelector(`a[data-position-id="${positionId}"]`)?.attributes['data-company-id']?.value;
-        if (!companyId) {
-            console.log(`Cannot find companyId for positionId: ${positionId}`);
+        let companyKey;
+        if (site === 'www.wanted.co.kr') {
+            const companyId = document.querySelector(`a[data-position-id="${positionId}"]`)?.attributes['data-company-id']?.value;
+            if (!companyId) {
+                console.log(`Cannot find companyId for positionId: ${positionId}`);
+                return;
+            }
+            companyKey = companyId;
+        } else if (site === 'jumpit.saramin.co.kr') {
+            const companyName = document.querySelector(`a[href="/position/${positionId}"] div.img_box > img`)?.attributes['alt']?.value;
+            if (!companyName) {
+                console.log(`Cannot find companyName for positionId: ${positionId}`);
+                return;
+            }
+            companyKey = companyName;
+        } else {
+            // rocket punch
+            alert('Rocket punch is not supported yet');
             return;
         }
+
         const localStorageKey = `${site}_companyTags`;
         chrome.storage.local.get([localStorageKey], (result) => {
-            const currentTags = result?.[companyId]?.join(',') || "";
+            const currentTags = result?.[localStorageKey]?.[companyKey]?.join(',') || "";
             const userInput = prompt("Enter new tag for the company(comma separated):", currentTags);
-            const tags = userInput.split(',').map(tag => tag.trim());
+            if (userInput == null) {
+                console.log('No user input');
+                return;
+            }
+            const tags = userInput.length == 0 ? undefined : userInput.split(',').map(tag => tag.trim());
             const current = result[localStorageKey] || {};
-            current[companyId] = tags;
+            current[companyKey] = tags;
             chrome.storage.local.set({ [localStorageKey]: current });
-            const els = document.querySelectorAll(`a[data-company-id="${companyId}"] img`);
+            
+            const els = getTagTargetElements(site, companyKey);
             if (els && els.length > 0) {
                 els.forEach((el) => {
                     TAGGER[site]?.(el.parentElement, tags, true);
