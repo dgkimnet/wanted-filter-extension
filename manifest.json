@@ -7,7 +7,7 @@
             "id": "wanted-filter-extension-support@dgkim.net"
         }
     },
-    "version": "0.4",
+    "version": "1.0.0",
     "permissions": [
         "contextMenus",
         "storage",
