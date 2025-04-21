@@ -6,7 +6,7 @@ const EL_PATTERNS = {
 }
 
 const TAG_PARENT_PATTERNS = {
-    "www.wanted.co.kr": `a[data-company-id="#{companyKey}"] img`,
+    "www.wanted.co.kr": `a[data-company-id="#{companyKey}"] img:not([class^="AdCard"])`,
     "jumpit.saramin.co.kr": `a div[class="img_box"] > img[alt="#{companyKey}"]`,
     "www.rocketpunch.com": ``, /* not implemented yet */
 }

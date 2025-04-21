@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## 1.0.1 (2025/04/21)
+
+- fix: exclude `AdCard` company tags
+
 ## 1.0.0 (2025/04/21)
 
 - feat: support restore from file (contextMenu - Restore from file)
