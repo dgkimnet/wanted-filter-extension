@@ -8,7 +8,7 @@ const EL_PATTERNS = {
 const TAG_PARENT_PATTERNS = {
     "www.wanted.co.kr": `a[data-company-id="#{companyKey}"] img:not([class^="AdCard"])`,
     "jumpit.saramin.co.kr": `a div[class="img_box"] > img[alt="#{companyKey}"]`,
-    "www.rocketpunch.com": ``, /* not implemented yet */
+    "www.rocketpunch.com": `a[href*="/companies/#{companyKey}"]`,
 }
 /**
  * 
@@ -53,91 +53,66 @@ const STYLER = {
     },
 }
 
-const TAGGER = {
-    "www.wanted.co.kr": (el, tags, addTag) => {
-        const parentElement = el.parentElement;
-        if (addTag) {
-            let tagContainer = parentElement.querySelector('.wanted-filter-tag-container');
-            if (!tagContainer) {
-                tagContainer = document.createElement('div');
-                tagContainer.className = 'wanted-filter-tag-container';
-                el.appendChild(tagContainer);
-            }
-            if (!tags || tags.length === 0) {
-                tagContainer.remove();
-                return;
-            }
-            const tobeRemoved = [];
-            const foundTags = [];
-            const tagEls = el.querySelectorAll('.wanted-filter-tag');
-            for (const tagEl of tagEls) {
-                const tagName = tagEl.getAttribute('data-tag');
-                if (!tags.includes(tagName)) {
-                    tobeRemoved.push(tagEl);
-                    continue;
-                } else {
-                    foundTags.push(tagName);
-                }
-            }
-            for (const tagEl of tobeRemoved) {
-                tagEl.remove();
-            }
-            for (const tobeCreatedTag of tags) {
-                if (foundTags.includes(tobeCreatedTag)) continue;
-                const newTag = document.createElement('span');
-                newTag.className = 'wanted-filter-tag';
-                newTag.setAttribute('data-tag', tobeCreatedTag);
-                newTag.innerText = tobeCreatedTag;
-                tagContainer.appendChild(newTag);
-            }
+const addTag = (el, tags, suffix = '') => {
+    let tagContainer = el.querySelector(`.wanted-filter-tag-container${suffix}`);
+    if (!tagContainer) {
+        tagContainer = document.createElement('div');
+        tagContainer.className = `wanted-filter-tag-container${suffix}`;
+        el.appendChild(tagContainer);
+    }
+    if (!tags || tags.length === 0) {
+        tagContainer.remove();
+        return;
+    }
+    const tobeRemoved = [];
+    const foundTags = [];
+    const tagEls = el.querySelectorAll(`.wanted-filter-tag${suffix}`);
+    for (const tagEl of tagEls) {
+        const tagName = tagEl.getAttribute('data-tag');
+        if (!tags.includes(tagName)) {
+            tobeRemoved.push(tagEl);
+            continue;
         } else {
-            const tagContainer = el.querySelector('.wanted-filter-tag-container');
-            if (tagContainer) {
-                tagContainer.remove();
-            }
+            foundTags.push(tagName);
+        }
+    }
+    for (const tagEl of tobeRemoved) {
+        tagEl.remove();
+    }
+    for (const tobeCreatedTag of tags) {
+        if (foundTags.includes(tobeCreatedTag)) continue;
+        const newTag = document.createElement('span');
+        newTag.className = `wanted-filter-tag${suffix}`;
+        newTag.setAttribute('data-tag', tobeCreatedTag);
+        newTag.innerText = tobeCreatedTag;
+        tagContainer.appendChild(newTag);
+    }
+}
+
+const TAGGER = {
+    "www.wanted.co.kr": (el, tags) => {
+        const parentElement = el.parentElement;
+        if (parentElement) {
+            addTag(parentElement, tags);
+        } else {
+            console.log(`No parent element found for ${el}`);
         }
     },
-    "jumpit.saramin.co.kr": (el, tags, addTag) => {
+    "jumpit.saramin.co.kr": (el, tags) => {
         const parentElement = el.parentElement;
-        if (addTag) {
-            let tagContainer = parentElement.querySelector('.wanted-filter-tag-container');
-            if (!tagContainer) {
-                tagContainer = document.createElement('div');
-                tagContainer.className = 'wanted-filter-tag-container';
-                el.appendChild(tagContainer);
-            }
-            if (!tags || tags.length === 0) {
-                tagContainer.remove();
-                return;
-            }
-            const tobeRemoved = [];
-            const foundTags = [];
-            const tagEls = el.querySelectorAll('.wanted-filter-tag');
-            for (const tagEl of tagEls) {
-                const tagName = tagEl.getAttribute('data-tag');
-                if (!tags.includes(tagName)) {
-                    tobeRemoved.push(tagEl);
-                    continue;
-                } else {
-                    foundTags.push(tagName);
-                }
-            }
-            for (const tagEl of tobeRemoved) {
-                tagEl.remove();
-            }
-            for (const tobeCreatedTag of tags) {
-                if (foundTags.includes(tobeCreatedTag)) continue;
-                const newTag = document.createElement('span');
-                newTag.className = 'wanted-filter-tag';
-                newTag.setAttribute('data-tag', tobeCreatedTag);
-                newTag.innerText = tobeCreatedTag;
-                tagContainer.appendChild(newTag);
-            }
+        if (parentElement) {
+            addTag(parentElement, tags);
         } else {
-            const tagContainer = el.querySelector('.wanted-filter-tag-container');
-            if (tagContainer) {
-                tagContainer.remove();
-            }
+            console.log(`No parent element found for ${el}`);
+        }
+    },
+    "www.rocketpunch.com": (el, tags) => {
+        const parentElement = el.parentElement?.parentElement;
+        if (parentElement) {
+            parentElement.style.position = 'relative';
+            addTag(parentElement, tags, '-rocketpunch');
+        } else {
+            console.log(`No parent element found for ${el}`);
         }
     }
 }
@@ -184,7 +159,7 @@ const highlightSavedItems = () => {
             const els = getTagTargetElements(site, companyKey);
             if (els && els.length > 0) {
                 els.forEach((el) => {
-                    TAGGER[site]?.(el.parentElement, tags, true);
+                    TAGGER[site]?.(el, tags);
                 });
             }
         }
@@ -263,9 +238,23 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
             }
             companyKey = companyName;
         } else {
-            // rocket punch
-            alert('Rocket punch is not supported yet');
-            return;
+            // www.rocketpunch.com
+            const positionLink = document.querySelector(`a[href*="/jobs/${positionId}"]`);
+            if (!positionLink) {
+                console.log(`Cannot find position link for positionId: ${positionId}`);
+                return;
+            }
+            const companyLink = positionLink.parentElement?.parentElement?.parentElement?.querySelector(`a[href*="/companies/"]`);
+            if (!companyLink) {
+                console.log(`Cannot find company link for positionId: ${positionId}`);
+                return;
+            }
+            const companyName = companyLink?.attributes['href']?.value?.split('/')[2];
+            if (!companyName) {
+                console.log(`Cannot find companyName for positionId: ${positionId}`);
+                return;
+            }
+            companyKey = companyName;
         }
 
         const localStorageKey = `${site}_companyTags`;
@@ -284,7 +273,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
             const els = getTagTargetElements(site, companyKey);
             if (els && els.length > 0) {
                 els.forEach((el) => {
-                    TAGGER[site]?.(el.parentElement, tags, true);
+                    TAGGER[site]?.(el, tags);
                 });
             }
         });

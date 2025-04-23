@@ -23,10 +23,34 @@
     padding: 0 10px;
 }
 
+.wanted-filter-tag-container-rocketpunch {
+    position: absolute !important;
+    display: flex;
+    flex-wrap: wrap;
+
+    left: 10px;
+    top: 10px;
+    right: 40px;
+    gap: 2px;
+    /* background-color: rgba(0, 255, 0, 0.4); */
+    border-radius: 10px;
+    padding: 10px;
+    line-height: 1em;
+    justify-content: right;
+}
+
 .wanted-filter-tag {
     border-radius: 10px;
     padding: 5px;
     font-weight: bold;
     background-color: green;
     color: white;
+}
+
+.wanted-filter-tag-rocketpunch {
+    border-radius: 10px;
+    padding: 5px;
+    font-weight: bold;
+    background-color: rgba(0, 255, 0, 0.6);
+    color: black;
 }
