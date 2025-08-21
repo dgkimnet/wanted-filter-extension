@@ -1,0 +1,30 @@
+name: Build artifact
+
+on:
+  push:
+    tags:
+      - '*'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Get the version
+        id: get_version
+        # run: echo ::set-output name=VERSION::$(echo $GITHUB_REF | cut -d / -f 3)
+        run: echo "VERSION=$(echo $GITHUB_REF | cut -d / -f 3- | tr '/' '-')-$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
+
+      - name: Build
+        run: ./build.sh
+
+      - name: Archive Build Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: wanted-filter-extension
+          retention-days: 1
+          path: |
+            wanted-filter-extension.zip
+            wanted-filter-extension.xpi

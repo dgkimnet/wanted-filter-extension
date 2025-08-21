@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## 1.2.0 (2025/08/21)
+
+- feat: update for wanted site renewal
+
 ## 1.1.0 (2025/04/23)
 
 - feat: support `companyTag` for rocketpunch.com
