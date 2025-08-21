@@ -28,3 +28,31 @@ jobs:
           path: |
             wanted-filter-extension.zip
             wanted-filter-extension.xpi
+
+  release:
+    needs:
+      - build
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Get the version
+        id: get_version
+        run: echo "VERSION=$(echo $GITHUB_REF | cut -d / -f 3- | tr '/' '-')-$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
+
+      - name: Download Build Artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: wanted-filter-extension
+          merge-multiple: true
+
+      - name: Create GitHub Release
+        uses: ncipollo/release-action@v1
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          tag: ${{ github.ref }}
+          # name: "Release ${{ github.ref }}"
+          draft: true
+          artifacts: "wanted-filter-extension.zip,wanted-filter-extension.xpi"  # Path to the artifact
