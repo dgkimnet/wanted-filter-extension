@@ -1,12 +1,23 @@
 
 const EL_PATTERNS = {
-    "www.wanted.co.kr": `div > a[data-position-id="#{positionId}"]`,
+    "www.wanted.co.kr": `div > a[href="/wd/#{positionId}"]`,
     "jumpit.saramin.co.kr": `a[href="/position/#{positionId}"]`,
     "www.rocketpunch.com": `div[class*="job-card"] > a[href*="/jobs/#{positionId}/"]`,
 }
 
+/**
+ * Patterns to find company key with positionId
+ * TODO implement jumpit, saramin later..
+ */
+const EL_PATTERNS_COMPANY_KEY = {
+    "www.wanted.co.kr": (positionId) => {
+        const el = `a[href="/wd/#{positionId}"] button`;
+        return document.querySelector(el.replace('#{positionId}', positionId))?.attributes['data-company-id']?.value;
+    },
+}
+
 const TAG_PARENT_PATTERNS = {
-    "www.wanted.co.kr": `a[data-company-id="#{companyKey}"] img:not([class^="AdCard"])`,
+    "www.wanted.co.kr": `a button[data-company-id="#{companyKey}"]`,
     "jumpit.saramin.co.kr": `a div[class="img_box"] > img[alt="#{companyKey}"]`,
     "www.rocketpunch.com": `a[href*="/companies/#{companyKey}"]`,
 }
@@ -224,7 +235,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
         const { positionId } = request;
         let companyKey;
         if (site === 'www.wanted.co.kr') {
-            const companyId = document.querySelector(`a[data-position-id="${positionId}"]`)?.attributes['data-company-id']?.value;
+            const companyId = EL_PATTERNS_COMPANY_KEY[site](positionId);
             if (!companyId) {
                 console.log(`Cannot find companyId for positionId: ${positionId}`);
                 return;
